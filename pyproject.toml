@@ -12,6 +12,8 @@ fastapi = {extras = ["all"], version = "^0.110.1"}
 sqlalchemy = "^2.0.29"
 python-dotenv = "^1.0.1"
 psycopg2-binary = "^2.9.9"
+aiohttp = {extras = ["speedups"], version = "^3.9.4"}
+aiodns = "^3.2.0"
 
 
 [build-system]

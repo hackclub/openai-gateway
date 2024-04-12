@@ -29,21 +29,34 @@ class User(UserBase):
         from_attributes = True
 
 class TokenBase(BaseModel):
-    token: str
     owner_slack_id: str
     is_active: bool = True
     is_revoked: bool = False
     is_expired: bool = False
     is_blocked: bool = False
     uses_left: int = 500
-    last_used: datetime.datetime
 
 class TokenCreate(TokenBase):
     pass
 
 class Token(TokenBase):
     created_at: datetime.datetime
+    last_used: datetime.datetime
+    token: str
+    class Config:
+        from_attributes = True
 
+class UsageBase(BaseModel):
+    token: str
+    owner_slack_id: str
+    created_at: datetime.datetime
+    request_data: str
+    response_data: str
+
+class UsageCreate(UsageBase):
+    pass
+
+class Usage(UsageBase):
     class Config:
         from_attributes = True
 
@@ -53,3 +66,7 @@ class TokenUse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class Prompt(BaseModel):
+    prompt: str

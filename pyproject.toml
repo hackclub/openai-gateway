@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "open-ai-token"
+version = "0.1.0"
+description = ""
+authors = ["Arpan Pandey <arpanpandey.aps@gmail.com>"]
+readme = "README.md"
+packages = [{include = "open_ai_token"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = {extras = ["all"], version = "^0.110.1"}
+sqlalchemy = "^2.0.29"
+python-dotenv = "^1.0.1"
+psycopg2-binary = "^2.9.9"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

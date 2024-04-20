@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import StreamingResponse
 from open_ai_token.openai import chat_completions
 
 load_dotenv()
@@ -121,10 +122,8 @@ async def post_chat_completions(prompt: schemas.Prompt, db: Session = Depends(ge
         db_token.uses_left -= 1
         db.commit()
         try:
-            completions = await chat_completions(prompt, db_token)
-            if completions[1] != 200:
-                raise HTTPException(status_code=completions[1], detail=completions[0])
-            return completions[0]
+            return StreamingResponse(chat_completions(prompt.text, db_token.api_key), media_type="application/json")
+
         except ValueError as e:
             return {"Error": str(e)}
 

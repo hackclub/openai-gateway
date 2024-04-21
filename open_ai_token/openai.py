@@ -219,3 +219,37 @@ async def retrieve_file_content(file_id):
         async with session.get(f"https://api.openai.com/v1/files/{file_id}/content", headers={"Authorization": f"Bearer {OPEN_AI_TOKEN_ORG}"} ) as response:
             # return response json and status code
             return await response.json(), response.status
+
+async def image_generation(json_data):
+    """
+    This function sends a POST request to the OpenAI API to generate an image
+    :param json_data: The JSON data to be sent to the API
+    """
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://api.openai.com/v1/images/generations", json=json_data, headers={"Authorization": f"Bearer {OPEN_AI_TOKEN_ORG}"} ) as response:
+            # return response json and status code
+            return await response.json(), response.status
+
+async def edit_image_generation(json_data):
+    """
+    This function sends a POST request to the OpenAI API to edit an image
+    :param json_data: The JSON data to be sent to the API
+    """
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://api.openai.com/v1/images/edits", json=json_data, headers={"Authorization": f"Bearer {OPEN_AI_TOKEN_ORG}"} ) as response:
+            # return response json and status code
+            return await response.json(), response.status
+
+async def create_image_variation(json_data, image):
+    """
+    This function sends a POST request to the OpenAI API to create an image variation
+    :param json_data: The JSON data to be sent to the API
+    :param image: The image to be uploaded
+    """
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://api.openai.com/v1/images/variations", json=json_data, files={"image": open(image, "rb")}, headers={"Authorization": f"Bearer {OPEN_AI_TOKEN_ORG}"} ) as response:
+            # return response json and status code
+            return await response.json(), response.status

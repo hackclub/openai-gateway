@@ -25,7 +25,7 @@ class User(Base):
 
 class Token(Base):
     __tablename__ = "tokens"
-    token = Column(UUID, primary_key=True, index=True, unique=True, server_default=func.uuid_generate_v4())
+    token = Column(String, primary_key=True, index=True, unique=True, server_default=func.uuid_generate_v4())
     owner_slack_id = Column(String, ForeignKey("users.slack_id"))
     owner = relationship("User", back_populates="tokens")
     is_active = Column(Boolean, default=True)

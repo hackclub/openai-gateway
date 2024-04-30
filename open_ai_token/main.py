@@ -6,7 +6,7 @@ import os
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
-from open_ai_token.openai import chat_completions
+from open_ai_token.openai import *
 
 load_dotenv()
 
@@ -123,6 +123,31 @@ async def post_chat_completions(prompt: schemas.Prompt, db: Session = Depends(ge
         db.commit()
         try:
             return StreamingResponse(chat_completions(prompt.text, db_token.api_key), media_type="application/json")
+
+        except ValueError as e:
+            return {"Error": str(e)}
+
+    except ValueError as e:
+        return {"Error": str(e)}
+
+# Embedding routes
+
+@app.post("/embeddings", include_in_schema=True)
+async def post_embeddings(prompt: schemas.Prompt, db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    This route is used to get embeddings for a prompt.
+    """
+
+    try:
+        authenticate(credentials)
+        token = credentials.credentials
+        db_token = crud.get_token(db, token)
+        if db_token is None:
+            raise ValueError("Token not found")
+        db_token.uses_left -= 1
+        db.commit()
+        try:
+            return StreamingResponse(embeddings(prompt.text, db_token.api_key), media_type="application/json")
 
         except ValueError as e:
             return {"Error": str(e)}

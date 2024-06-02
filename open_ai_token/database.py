@@ -3,10 +3,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
-SQLALCHEMY_DATABASE_URL = "postgresql://localhost"
+SQLALCHEMY_DATABASE_URL = os.getenv("DB_URL", "sqlite:///./test.db")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, pool_pre_ping=True

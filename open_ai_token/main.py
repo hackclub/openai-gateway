@@ -1,12 +1,13 @@
-from fastapi import FastAPI, Depends
-from fastapi.exceptions import HTTPException
+from typing_extensions import Tuple, Union
+from fastapi import FastAPI, HTTPException, Query, Response, Depends
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 import os
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
-from open_ai_token.openai import *
+import open_ai_token.openai as openai_module
+from typing import Annotated
 
 load_dotenv()
 
@@ -58,13 +59,14 @@ def authenticate(credentials: HTTPAuthorizationCredentials = Depends(security)):
 def read_root():
     return {"Message": "Hello traveller!\n You have reached the Open AI Token API by Hack Club. \n\nPlease refer to the documentation at /docs or /redoc to get started. \n You may also need to get a token from the Hack Club Slack to use this API. \n\nHappy Hacking!"}
 
+@app.exception_handler(ValueError)
 @app.post("/register", include_in_schema=show_in_docs_for_priv_routes, response_model=schemas.User)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     try:
         db_user = crud.create_user(db, user)
         return db_user
     except ValueError as e:
-        return {"Error": str(e)}
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/users", include_in_schema=show_in_docs_for_priv_routes, response_model=list[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -106,51 +108,74 @@ def create_token(token: schemas.TokenCreate, db: Session = Depends(get_db)):
 # These routes are always included in the documentation
 # These mirror the OpenAI API routes
 # Use tokens for authentication as headers
+#
 
-@app.post("/chat/completions", include_in_schema=True)
-async def post_chat_completions(prompt: schemas.Prompt, db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
+@app.get("/openai/models")
+def models(
+    response: Response
+):
     """
-    This route is used to get completions for a prompt.
+    Get the list of models available on OpenAI API
     """
+    res: Tuple = openai_module.models()
+    return res
 
-    try:
-        authenticate(credentials)
-        token = credentials.credentials
-        db_token = crud.get_token(db, token)
-        if db_token is None:
-            raise ValueError("Token not found")
-        db_token.uses_left -= 1
-        db.commit()
-        try:
-            return StreamingResponse(chat_completions(prompt.text, db_token.api_key), media_type="application/json")
-
-        except ValueError as e:
-            return {"Error": str(e)}
-
-    except ValueError as e:
-        return {"Error": str(e)}
-
-# Embedding routes
-
-@app.post("/embeddings", include_in_schema=True)
-async def post_embeddings(prompt: schemas.Prompt, db: Session = Depends(get_db), credentials: HTTPAuthorizationCredentials = Depends(security)):
+@app.post("/openai/model/{model_name}")
+def model(
+    model_name: str,
+    response: Response
+):
     """
-    This route is used to get embeddings for a prompt.
+    Get the details of a model available on OpenAI API
     """
+    res: Tuple = openai_module.model(model_name)
+    return res
 
-    try:
-        authenticate(credentials)
-        token = credentials.credentials
-        db_token = crud.get_token(db, token)
-        if db_token is None:
-            raise ValueError("Token not found")
-        db_token.uses_left -= 1
-        db.commit()
-        try:
-            return StreamingResponse(embeddings(prompt.text, db_token.api_key), media_type="application/json")
+@app.post("/openai/chat/completions")
+def post_chat_completions(
+    data: dict, response: Response, credentials=Depends(security)
+):
+    """
+    Get the completions for a chat model
+    """
+    sec = authenticate(credentials)
 
-        except ValueError as e:
-            return {"Error": str(e)}
+    if not sec:
+        response.status_code = 401
+        return {"message": "Invalid token"}
 
-    except ValueError as e:
-        return {"Error": str(e)}
+    resp = openai_module.post_chat_completions(data)
+
+    if isinstance(resp, tuple) and resp[1] != 200:
+        response.status_code = resp[1]
+        return resp[0]
+
+    return StreamingResponse(resp, media_type="application/json")
+
+@app.post("/openai/images/generations")
+def create_image(data: dict, response: Response, credentials=Depends(security)):
+    """
+    Create an image on OpenAI API
+    """
+    sec = authenticate(credentials)
+
+    if not sec:
+        response.status_code = 401
+        return {"message": "Invalid token"}
+
+    resp = openai_module.create_image(data)
+    return StreamingResponse(resp, media_type="image/png")
+
+@app.post("/openai/embeddings")
+def embeddings(data: dict, response: Response, credentials=Depends(security)):
+    """
+    Get the embeddings of a text on OpenAI API
+    """
+    sec = authenticate(credentials)
+
+    if not sec:
+        response.status_code = 401
+        return {"message": "Invalid token"}
+
+    resp = openai_module.embeddings(data)
+    return StreamingResponse(resp, media_type="application/json")

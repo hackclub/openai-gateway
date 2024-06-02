@@ -1,5 +1,4 @@
 from typing import Union
-
 from pydantic import BaseModel
 
 import datetime
@@ -29,7 +28,7 @@ class User(UserBase):
         from_attributes = True
 
 class TokenBase(BaseModel):
-    owner_slack_id: str
+    user_id: str
     is_active: bool = True
     is_revoked: bool = False
     is_expired: bool = False
@@ -41,28 +40,28 @@ class TokenCreate(TokenBase):
 
 class Token(TokenBase):
     created_at: datetime.datetime
-    last_used: datetime.datetime
     token: str
     class Config:
         from_attributes = True
 
 class UsageBase(BaseModel):
     token: str
-    owner_slack_id: str
     created_at: datetime.datetime
     request_data: str
     response_data: str
+    endpoint: str
 
 class UsageCreate(UsageBase):
     pass
 
 class Usage(UsageBase):
+    id: int
     class Config:
         from_attributes = True
 
 class TokenUse(BaseModel):
     token: str
-    owner_slack_id: str
+    user_id: str
 
     class Config:
         from_attributes = True

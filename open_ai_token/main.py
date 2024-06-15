@@ -47,26 +47,29 @@ def get_db():
 def authenticate(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     db = SessionLocal()
-    if not crud.check_token(db, token):
-        raise ValueError("Invalid token")
-    token = crud.get_token(db, token)
-    if token is None:
-        raise ValueError("Invalid token")
-    if token.uses_left == 0:
-        raise ValueError("No uses left")
-    if token.is_expired or not token.is_active or token.is_revoked or token.is_blocked:
-        raise ValueError("Token is expired or disabled")
-    return token
+    try:
+        if not crud.check_token(db, token):
+            raise ValueError("Invalid token")
+        token = crud.get_token(db, token)
+        if token is None:
+            raise ValueError("Invalid token")
+        if token.uses_left == 0:
+            raise ValueError("No uses left")
+        if token.is_expired or not token.is_active or token.is_revoked or token.is_blocked:
+            raise ValueError("Token is expired or disabled")
+        return token
+    except Exception as e:
+        raise e
 
-def usage_register(sec: schemas.Token, endpoint: str, data: str, resp,db: Session = Depends(get_db),):
-   resp = " ".join([str(x) for x in resp])
-   crud.register_usage(db, schemas.UsageCreate(
-        token=sec.token,
-        request_data=str(data),
-        response_data=str(resp),
+def log_usage(token: schemas.TokenUse, db: Session = Depends(get_db), request_data: str = " ", response_data: str = " ", endpoint: str = " "):
+    usage = schemas.UsageCreate(
+        token=token.token,
         created_at=datetime.now(),
+        request_data=request_data,
+        response_data=response_data,
         endpoint=endpoint
-    ))
+    )
+    crud.log_usage(db, usage)
 
 
 @app.get("/")
@@ -126,12 +129,19 @@ def create_token(token: schemas.TokenCreate, db: Session = Depends(get_db)):
 
 @app.get("/models")
 def models(
-    response: Response
+    response: Response,
+    credentials=Depends(security),
+    db: Session = Depends(get_db)
 ):
     """
     Get the list of models available on OpenAI API
     """
+    sec = authenticate(credentials)
     res: Tuple = openai_module.models()
+
+    # Register the use of the token
+    log_usage(sec, db, response_data=str(res), endpoint="/models", request_data="GET Request to /models")
+
     return res
 
 @app.post("/model/{model_name}")
@@ -164,7 +174,6 @@ def post_chat_completions(
 
     # Register the use of the token
     crud.use_token(db, sec)
-    usage_register(sec, "chat/completions", str(data), resp, db)
 
     if isinstance(resp, tuple) and resp[1] != 200:
         response.status_code = resp[1]

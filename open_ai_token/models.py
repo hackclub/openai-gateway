@@ -16,7 +16,7 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     is_club_leader = Column(Boolean, default=False)
     can_use_superpowers = Column(Boolean, default=False)
-    image_uage_allowed = Column(Boolean, default=True)
+    image_usage_allowed = Column(Boolean, default=True)
     gpt4_usage_allowed = Column(Boolean, default=False)
     is_banned = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
@@ -35,7 +35,7 @@ class Token(Base):
     uses_left = Column(Integer, default=500)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     user = relationship("User", back_populates="tokens")
-    usages = relationship("Usage", back_populates="token")
+    usages = relationship("Usage", backref="token")
 
 
 class Usage(Base):
@@ -45,5 +45,4 @@ class Usage(Base):
     request_data = Column(Text)
     response_data = Column(Text)
     token_id = Column(String, ForeignKey("tokens.token"))
-    token = relationship("Token", back_populates="usages")
     endpoint = Column(String)
